@@ -1,7 +1,6 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+let supabase = null;
 
 const categories = [
   ['🧱','Seramik'],['🎨','Boya'],['🪨','Mermer'],['🪚','Mobilya'],
@@ -19,8 +18,8 @@ const demoJobs = [
   {title:'Daire komple boya',city:'Kayseri',category:'Boya',start_date:null,description:'180 m² daire. Malzeme işverene ait, işçilik teklifleri alınacaktır.',status:'open'}
 ];
 
-let teams = [];
-let jobs = [];
+let teams = [...demoTeams];
+let jobs = [...demoJobs];
 let currentSession = null;
 let pendingAction = null;
 
@@ -42,9 +41,7 @@ function openModal(title, html){
   if(!modal.open) modal.showModal();
 }
 
-function closeModal(){
-  if(modal.open) modal.close();
-}
+function closeModal(){ if(modal.open) modal.close(); }
 
 document.querySelector('#modalClose').onclick = closeModal;
 modal.addEventListener('click',(e)=>{
@@ -81,10 +78,7 @@ categories.forEach(([icon,name])=>{
 
 function renderTeams(list=teams){
   teamCards.innerHTML='';
-  if(!list.length){
-    teamCards.innerHTML='<p class="muted">Bu filtreye uygun ekip bulunamadı.</p>';
-    return;
-  }
+  if(!list.length){ teamCards.innerHTML='<p class="muted">Bu filtreye uygun ekip bulunamadı.</p>'; return; }
   list.forEach(team=>{
     const initials=(team.name || 'TE').split(' ').slice(0,2).map(x=>x[0]).join('');
     const rating=team.rating ?? 'Yeni';
@@ -132,17 +126,12 @@ function contactWhatsApp(number,name='Bu kullanıcı'){
   if(number){
     const phone=String(number).replace(/\D/g,'');
     window.open(`https://wa.me/${phone}`,'_blank','noopener');
-  }else{
-    showMessage('İletişim',`${name} henüz WhatsApp numarası eklememiş.`);
-  }
+  } else showMessage('İletişim',`${name} henüz WhatsApp numarası eklememiş.`);
 }
 
 function renderJobs(list=jobs){
   jobCards.innerHTML='';
-  if(!list.length){
-    jobCards.innerHTML='<p class="muted">Henüz aktif iş ilanı yok.</p>';
-    return;
-  }
+  if(!list.length){ jobCards.innerHTML='<p class="muted">Henüz aktif iş ilanı yok.</p>'; return; }
   list.forEach(job=>{
     const el=document.createElement('article');
     el.className='job-card';
@@ -154,15 +143,14 @@ function renderJobs(list=jobs){
 }
 
 async function loadData(){
+  if(!supabase){ renderTeams(); renderJobs(); return; }
   const [teamsResult,jobsResult] = await Promise.all([
     supabase.from('teams').select('*').order('featured',{ascending:false}).order('created_at',{ascending:false}).limit(50),
     supabase.from('jobs').select('*').eq('status','open').order('featured',{ascending:false}).order('created_at',{ascending:false}).limit(50)
   ]);
-
   teams = teamsResult.error || !teamsResult.data?.length ? demoTeams : teamsResult.data;
   jobs = jobsResult.error || !jobsResult.data?.length ? demoJobs : jobsResult.data;
-  renderTeams();
-  renderJobs();
+  renderTeams(); renderJobs();
 }
 
 function filterTeams(){
@@ -182,7 +170,6 @@ document.querySelector('#searchBtn').onclick=()=>{
   if(!filtered.length) showMessage('Sonuç bulunamadı','Filtreyi değiştirerek tekrar deneyebilirsin.');
 };
 document.querySelector('#searchInput').addEventListener('keydown',e=>{if(e.key==='Enter') document.querySelector('#searchBtn').click();});
-
 document.querySelector('[data-action="find"]').onclick=()=>goTo('#searchPanel','teams');
 document.querySelector('[data-action="post"]').onclick=showJobForm;
 document.querySelector('#postJobBtn').onclick=showJobForm;
@@ -193,7 +180,6 @@ document.querySelector('#showAllBtn').onclick=()=>{
   goTo('#teamsSection','teams');
 };
 document.querySelector('#brandHome').onclick=()=>goTo('#top','home');
-
 document.querySelectorAll('.bottom-nav button').forEach(btn=>{
   btn.onclick=()=>{
     const target=btn.dataset.nav;
@@ -203,8 +189,13 @@ document.querySelectorAll('.bottom-nav button').forEach(btn=>{
     if(target==='profile') showProfile();
   };
 });
-
 loginBtn.onclick=()=> currentSession ? showProfile() : showAuth();
+
+function ensureSupabase(){
+  if(supabase) return true;
+  showMessage('Bağlantı kurulamadı','Üyelik servisine şu an ulaşılamıyor. Ana menüler ve arama çalışmaya devam ediyor. Sayfayı yenileyip tekrar deneyebilirsin.','notice error');
+  return false;
+}
 
 function showAuth(mode='login',message=''){
   const isSignup=mode==='signup';
@@ -218,61 +209,45 @@ function showAuth(mode='login',message=''){
     </form>
     <div class="modal-actions"><button class="secondary" id="switchAuth">${isSignup ? 'Zaten hesabım var' : 'Yeni hesap oluştur'}</button></div>
     <p class="form-help">TrendEkip hesabınla profilini, ekip kartını ve iş ilanlarını yönetebilirsin.</p>`);
-
   document.querySelector('#switchAuth').onclick=()=>showAuth(isSignup?'login':'signup');
   document.querySelector('#authForm').onsubmit=async(e)=>{
     e.preventDefault();
+    if(!ensureSupabase()) return;
     const form=new FormData(e.currentTarget);
     const email=String(form.get('email')||'').trim();
     const password=String(form.get('password')||'');
     const submit=e.currentTarget.querySelector('button[type="submit"]');
-    submit.disabled=true;
-    submit.textContent='İşleniyor...';
+    submit.disabled=true; submit.textContent='İşleniyor...';
     let result;
     if(isSignup){
       const fullName=String(form.get('full_name')||'').trim();
       result=await supabase.auth.signUp({email,password,options:{data:{full_name:fullName}}});
-    }else{
-      result=await supabase.auth.signInWithPassword({email,password});
-    }
-    submit.disabled=false;
-    submit.textContent=isSignup?'Hesap oluştur':'Giriş yap';
-    if(result.error){
-      showAuth(mode,result.error.message);
-      return;
-    }
+    } else result=await supabase.auth.signInWithPassword({email,password});
+    submit.disabled=false; submit.textContent=isSignup?'Hesap oluştur':'Giriş yap';
+    if(result.error){ showAuth(mode,result.error.message); return; }
     if(isSignup && !result.data.session){
       pendingAction=null;
       showMessage('E-postanı kontrol et','Hesabını etkinleştirmek için e-postana gönderilen doğrulama bağlantısına dokun.','notice success');
       return;
     }
-    closeModal();
-    await refreshSession();
-    if(pendingAction==='postJob'){
-      pendingAction=null;
-      showJobForm();
-    }else{
-      showProfile();
-    }
+    closeModal(); await refreshSession();
+    if(pendingAction==='postJob'){ pendingAction=null; showJobForm(); } else showProfile();
   };
 }
 
 async function refreshSession(){
+  if(!supabase){ currentSession=null; updateAuthButton(); return; }
   const {data}=await supabase.auth.getSession();
   currentSession=data.session;
   updateAuthButton();
 }
 
-function updateAuthButton(){
-  loginBtn.textContent=currentSession ? 'Profilim' : 'Giriş yap';
-}
+function updateAuthButton(){ loginBtn.textContent=currentSession ? 'Profilim' : 'Giriş yap'; }
 
 async function showProfile(){
   setActiveNav('profile');
-  if(!currentSession){
-    showAuth('login','Profilini görmek için giriş yap.');
-    return;
-  }
+  if(!currentSession){ showAuth('login','Profilini görmek için giriş yap.'); return; }
+  if(!ensureSupabase()) return;
   const uid=currentSession.user.id;
   const [{data:profile},{data:team}]=await Promise.all([
     supabase.from('profiles').select('*').eq('id',uid).maybeSingle(),
@@ -295,37 +270,22 @@ async function showProfile(){
       <button class="secondary" id="myJobs">İlanlarım</button>
     </div>
     <div class="modal-actions"><button class="secondary" id="logoutBtn">Çıkış yap</button></div>`);
-
   document.querySelector('#profileForm').onsubmit=async(e)=>{
     e.preventDefault();
     const fd=new FormData(e.currentTarget);
-    const payload={
-      id:uid,
-      full_name:String(fd.get('full_name')||'').trim(),
-      account_type:String(fd.get('account_type')||'professional'),
-      city:String(fd.get('city')||'').trim()||null,
-      district:String(fd.get('district')||'').trim()||null,
-      whatsapp:String(fd.get('whatsapp')||'').trim()||null,
-      trade:String(fd.get('trade')||'').trim()||null,
-      experience_years:Number(fd.get('experience_years')||0),
-      about:String(fd.get('about')||'').trim()||null,
-      updated_at:new Date().toISOString()
-    };
+    const payload={id:uid,full_name:String(fd.get('full_name')||'').trim(),account_type:String(fd.get('account_type')||'professional'),city:String(fd.get('city')||'').trim()||null,district:String(fd.get('district')||'').trim()||null,whatsapp:String(fd.get('whatsapp')||'').trim()||null,trade:String(fd.get('trade')||'').trim()||null,experience_years:Number(fd.get('experience_years')||0),about:String(fd.get('about')||'').trim()||null,updated_at:new Date().toISOString()};
     const {error}=await supabase.from('profiles').upsert(payload);
     if(error){showMessage('Kaydedilemedi',error.message,'notice error');return;}
     showMessage('Kaydedildi','Profil bilgilerin güncellendi.','notice success');
   };
   document.querySelector('#teamManage').onclick=()=>showTeamForm(team,profile);
   document.querySelector('#myJobs').onclick=showMyJobs;
-  document.querySelector('#logoutBtn').onclick=async()=>{
-    await supabase.auth.signOut();
-    closeModal();
-    setActiveNav('home');
-  };
+  document.querySelector('#logoutBtn').onclick=async()=>{ await supabase.auth.signOut(); closeModal(); setActiveNav('home'); };
 }
 
 function showTeamForm(team,profile){
   if(!currentSession){showAuth();return;}
+  if(!ensureSupabase()) return;
   openModal(team?'Ekip kartını düzenle':'Ekip / Usta kartı oluştur',`
     <form id="teamForm" class="form-grid">
       <label>Görünen ad<input name="name" value="${esc(team?.name || profile?.full_name || '')}" required maxlength="80"></label>
@@ -342,33 +302,17 @@ function showTeamForm(team,profile){
   document.querySelector('#teamForm').onsubmit=async(e)=>{
     e.preventDefault();
     const fd=new FormData(e.currentTarget);
-    const payload={
-      owner_id:currentSession.user.id,
-      name:String(fd.get('name')||'').trim(),
-      category:String(fd.get('category')||'').trim(),
-      city:String(fd.get('city')||'').trim(),
-      district:String(fd.get('district')||'').trim()||null,
-      member_count:Number(fd.get('member_count')||1),
-      experience_years:Number(fd.get('experience_years')||0),
-      whatsapp:String(fd.get('whatsapp')||'').trim()||null,
-      description:String(fd.get('description')||'').trim()||null,
-      is_available:String(fd.get('is_available'))==='true',
-      updated_at:new Date().toISOString()
-    };
+    const payload={owner_id:currentSession.user.id,name:String(fd.get('name')||'').trim(),category:String(fd.get('category')||'').trim(),city:String(fd.get('city')||'').trim(),district:String(fd.get('district')||'').trim()||null,member_count:Number(fd.get('member_count')||1),experience_years:Number(fd.get('experience_years')||0),whatsapp:String(fd.get('whatsapp')||'').trim()||null,description:String(fd.get('description')||'').trim()||null,is_available:String(fd.get('is_available'))==='true',updated_at:new Date().toISOString()};
     const query=team?.id ? supabase.from('teams').update(payload).eq('id',team.id) : supabase.from('teams').insert(payload);
     const {error}=await query;
     if(error){showMessage('Kaydedilemedi',error.message,'notice error');return;}
-    await loadData();
-    showMessage('Yayında','Ekip/Usta kartın TrendEkip’te yayınlandı.','notice success');
+    await loadData(); showMessage('Yayında','Ekip/Usta kartın TrendEkip’te yayınlandı.','notice success');
   };
 }
 
 function showJobForm(){
-  if(!currentSession){
-    pendingAction='postJob';
-    showAuth('login','İş ilanı verebilmek için giriş yap veya ücretsiz hesap oluştur.');
-    return;
-  }
+  if(!currentSession){ pendingAction='postJob'; showAuth('login','İş ilanı verebilmek için giriş yap veya ücretsiz hesap oluştur.'); return; }
+  if(!ensureSupabase()) return;
   openModal('İş ilanı ver',`
     <form id="jobForm" class="form-grid">
       <label>İlan başlığı<input name="title" required maxlength="100" placeholder="800 m² seramik işi"></label>
@@ -384,27 +328,16 @@ function showJobForm(){
   document.querySelector('#jobForm').onsubmit=async(e)=>{
     e.preventDefault();
     const fd=new FormData(e.currentTarget);
-    const payload={
-      owner_id:currentSession.user.id,
-      title:String(fd.get('title')||'').trim(),
-      category:String(fd.get('category')||'').trim(),
-      city:String(fd.get('city')||'').trim(),
-      district:String(fd.get('district')||'').trim()||null,
-      start_date:String(fd.get('start_date')||'')||null,
-      work_amount:String(fd.get('work_amount')||'').trim()||null,
-      contact_whatsapp:String(fd.get('contact_whatsapp')||'').trim(),
-      description:String(fd.get('description')||'').trim(),
-      status:'open'
-    };
+    const payload={owner_id:currentSession.user.id,title:String(fd.get('title')||'').trim(),category:String(fd.get('category')||'').trim(),city:String(fd.get('city')||'').trim(),district:String(fd.get('district')||'').trim()||null,start_date:String(fd.get('start_date')||'')||null,work_amount:String(fd.get('work_amount')||'').trim()||null,contact_whatsapp:String(fd.get('contact_whatsapp')||'').trim(),description:String(fd.get('description')||'').trim(),status:'open'};
     const {error}=await supabase.from('jobs').insert(payload);
     if(error){showMessage('İlan yayınlanamadı',error.message,'notice error');return;}
-    await loadData();
-    showMessage('İlan yayında','İş ilanınız başarıyla yayınlandı.','notice success');
+    await loadData(); showMessage('İlan yayında','İş ilanınız başarıyla yayınlandı.','notice success');
   };
 }
 
 async function showMyJobs(){
   if(!currentSession){showAuth();return;}
+  if(!ensureSupabase()) return;
   const {data,error}=await supabase.from('jobs').select('*').eq('owner_id',currentSession.user.id).order('created_at',{ascending:false});
   if(error){showMessage('İlanlar alınamadı',error.message,'notice error');return;}
   const items=(data||[]).map(j=>`<div class="profile-summary"><strong>${esc(j.title)}</strong><span>${esc(j.city)} • ${j.status==='open'?'Aktif':'Kapalı'}</span><div class="modal-actions"><button class="secondary toggle-job" data-id="${esc(j.id)}" data-status="${esc(j.status)}">${j.status==='open'?'İlanı kapat':'Tekrar aç'}</button></div></div>`).join('');
@@ -413,17 +346,26 @@ async function showMyJobs(){
     const next=btn.dataset.status==='open'?'closed':'open';
     const {error:err}=await supabase.from('jobs').update({status:next,updated_at:new Date().toISOString()}).eq('id',btn.dataset.id);
     if(err){showMessage('Güncellenemedi',err.message,'notice error');return;}
-    await loadData();
-    showMyJobs();
+    await loadData(); showMyJobs();
   });
 }
 
-supabase.auth.onAuthStateChange((_event,session)=>{
-  currentSession=session;
-  updateAuthButton();
-});
+renderTeams();
+renderJobs();
+updateAuthButton();
 
-await refreshSession();
-await loadData();
+(async()=>{
+  try{
+    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+    supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    supabase.auth.onAuthStateChange((_event,session)=>{ currentSession=session; updateAuthButton(); });
+    await refreshSession();
+    await loadData();
+  }catch(error){
+    console.error('Supabase yüklenemedi:',error);
+    currentSession=null;
+    updateAuthButton();
+  }
+})();
 
 if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
