@@ -1,0 +1,10 @@
+{
+  "name": "TrendEkip",
+  "short_name": "TrendEkip",
+  "description": "Doğru ekip. Doğru iş.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "icons": []
+}
