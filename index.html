@@ -10,8 +10,8 @@
   <title>TrendEkip</title>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand-wrap">
+  <header class="topbar" id="top">
+    <div class="brand-wrap" role="button" tabindex="0" id="brandHome">
       <div class="logo">TE</div>
       <div>
         <div class="brand">TrendEkip</div>
@@ -22,7 +22,7 @@
   </header>
 
   <main>
-    <section class="hero">
+    <section class="hero" id="homeSection">
       <span class="eyebrow">Usta • Ekip • Mimar • Müteahhit</span>
       <h1>İşine uygun ekibi hızlıca bul.</h1>
       <p>Gerçek işler, referanslar ve puanlarla ekipleri karşılaştır. İş ilanı ver, uygun ekiplerle doğrudan iletişime geç.</p>
@@ -43,7 +43,7 @@
       <button class="primary" id="searchBtn">Ara</button>
     </section>
 
-    <section>
+    <section id="categoriesSection">
       <div class="section-head">
         <div>
           <span class="eyebrow">Öne çıkan kategoriler</span>
@@ -53,7 +53,7 @@
       <div class="category-grid" id="categoryGrid"></div>
     </section>
 
-    <section>
+    <section id="teamsSection">
       <div class="section-head">
         <div>
           <span class="eyebrow">Müsait ekipler</span>
@@ -64,31 +64,31 @@
       <div class="cards" id="teamCards"></div>
     </section>
 
-    <section class="jobs-section">
+    <section class="jobs-section" id="jobsSection">
       <div class="section-head">
         <div>
           <span class="eyebrow">Yeni işler</span>
           <h2>Son iş ilanları</h2>
         </div>
+        <button class="link-btn" id="postJobBtn">İlan ver</button>
       </div>
       <div class="jobs" id="jobCards"></div>
     </section>
   </main>
 
-  <nav class="bottom-nav">
-    <button class="active">Ana Sayfa</button>
-    <button>İşler</button>
-    <button>Ustalar</button>
-    <button>Profil</button>
+  <nav class="bottom-nav" aria-label="Ana menü">
+    <button class="active" data-nav="home">Ana Sayfa</button>
+    <button data-nav="jobs">İşler</button>
+    <button data-nav="teams">Ustalar</button>
+    <button data-nav="profile">Profil</button>
   </nav>
 
   <dialog id="modal">
-    <form method="dialog" class="modal-card">
-      <button class="close" value="cancel" aria-label="Kapat">×</button>
+    <div class="modal-card">
+      <button class="close" id="modalClose" aria-label="Kapat">×</button>
       <h3 id="modalTitle">TrendEkip</h3>
-      <p id="modalText"></p>
-      <button class="primary" value="ok">Tamam</button>
-    </form>
+      <div id="modalBody"></div>
+    </div>
   </dialog>
 
   <script type="module" src="app.js"></script>
