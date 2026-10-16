@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="TrendEkip — Doğru ekip. Doğru iş." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>TrendEkip</title>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-wrap">
+      <div class="logo">TE</div>
+      <div>
+        <div class="brand">TrendEkip</div>
+        <div class="tagline">Doğru ekip. Doğru iş.</div>
+      </div>
+    </div>
+    <button class="ghost" id="loginBtn">Giriş yap</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <span class="eyebrow">Usta • Ekip • Mimar • Müteahhit</span>
+      <h1>İşine uygun ekibi hızlıca bul.</h1>
+      <p>Gerçek işler, referanslar ve puanlarla ekipleri karşılaştır. İş ilanı ver, uygun ekiplerle doğrudan iletişime geç.</p>
+      <div class="hero-actions">
+        <button class="primary" data-action="find">Ekip bul</button>
+        <button class="secondary" data-action="post">İş ilanı ver</button>
+      </div>
+    </section>
+
+    <section class="search-panel" id="searchPanel">
+      <input id="searchInput" placeholder="Örn. seramik, boya, mermer..." />
+      <select id="citySelect">
+        <option value="">Tüm şehirler</option>
+        <option>Kahramanmaraş</option>
+        <option>Gaziantep</option>
+        <option>Kayseri</option>
+      </select>
+      <button class="primary" id="searchBtn">Ara</button>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Öne çıkan kategoriler</span>
+          <h2>Hangi ekibi arıyorsun?</h2>
+        </div>
+      </div>
+      <div class="category-grid" id="categoryGrid"></div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Müsait ekipler</span>
+          <h2>Şu an işe uygun ekipler</h2>
+        </div>
+        <button class="link-btn" id="showAllBtn">Tümünü gör</button>
+      </div>
+      <div class="cards" id="teamCards"></div>
+    </section>
+
+    <section class="jobs-section">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Yeni işler</span>
+          <h2>Son iş ilanları</h2>
+        </div>
+      </div>
+      <div class="jobs" id="jobCards"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="active">Ana Sayfa</button>
+    <button>İşler</button>
+    <button>Ustalar</button>
+    <button>Profil</button>
+  </nav>
+
+  <dialog id="modal">
+    <form method="dialog" class="modal-card">
+      <button class="close" value="cancel" aria-label="Kapat">×</button>
+      <h3 id="modalTitle">TrendEkip</h3>
+      <p id="modalText"></p>
+      <button class="primary" value="ok">Tamam</button>
+    </form>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
